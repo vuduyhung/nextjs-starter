@@ -8,9 +8,12 @@ import {
   LatestInvoiceRaw,
   User,
   Revenue,
+  Customer,
 } from './definitions';
 import { formatCurrency } from './utils';
 import { unstable_noStore as noStore } from 'next/cache';
+
+const ITEMS_PER_PAGE = 6;
 
 export async function fetchRevenue() {
   // Add noStore() here to prevent the response from being cached.
@@ -22,11 +25,11 @@ export async function fetchRevenue() {
     // Don't do this in production :)
 
     console.log('Fetching revenue data...');
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const data = await sql<Revenue>`SELECT * FROM revenue`;
 
-    console.log('Data fetch completed after 3 seconds.');
+    // console.log('Data fetch completed after 3 seconds.');
 
     return data.rows;
   } catch (error) {
@@ -92,7 +95,7 @@ export async function fetchCardData() {
   }
 }
 
-const ITEMS_PER_PAGE = 6;
+
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
@@ -152,7 +155,7 @@ export async function fetchInvoicesPages(query: string) {
 }
 
 export async function fetchInvoiceById(id: string) {
-  noStore()
+  noStore();
   try {
     const data = await sql<InvoiceForm>`
       SELECT
@@ -188,6 +191,7 @@ export async function fetchCustomers() {
     `;
 
     const customers = data.rows;
+
     return customers;
   } catch (err) {
     console.error('Database Error:', err);
@@ -195,9 +199,14 @@ export async function fetchCustomers() {
   }
 }
 
-export async function fetchFilteredCustomers(query: string) {
+export async function fetchFilteredCustomers(
+  query: string,
+  currentPage: number,
+) {
   noStore();
   try {
+    const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
     const data = await sql<CustomersTableType>`
 		SELECT
 		  customers.id,
@@ -214,6 +223,7 @@ export async function fetchFilteredCustomers(query: string) {
         customers.email ILIKE ${`%${query}%`}
 		GROUP BY customers.id, customers.name, customers.email, customers.image_url
 		ORDER BY customers.name ASC
+    LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
 	  `;
 
     const customers = data.rows.map((customer) => ({
@@ -226,6 +236,42 @@ export async function fetchFilteredCustomers(query: string) {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
+  }
+}
+
+export async function fetchCustomersPages(query: string) {
+  noStore();
+  try {
+    const count = await sql`
+		SELECT COUNT(*)
+		FROM customers
+		WHERE
+		  customers.name ILIKE ${`%${query}%`} OR
+      customers.email ILIKE ${`%${query}%`}
+	  `;
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of invoices.');
+  }
+}
+
+export async function fetchCustomerById(id: string) {
+  noStore();
+  try {
+    const data = await sql<Customer>`
+      SELECT
+        id, name, email, image_url
+      FROM customers
+      WHERE id = ${id};
+    `;
+
+    return data.rows[0];
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch invoice.');
   }
 }
 
