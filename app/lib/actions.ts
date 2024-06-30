@@ -55,8 +55,8 @@ const FormSchema = z.object({
     .or(z.literal('')), // Allow empty string
 });
 
-const CreateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+const CreateInvoice = FormSchema.omit({ id: true, date: true, customerName: true, customerEmail: true, customerImageUrl: true});
+const UpdateInvoice = FormSchema.omit({ id: true, date: true, customerName: true, customerEmail: true, customerImageUrl: true});
 const CreateCustomer = FormSchema.omit({
   id: true,
   customerId: true,
@@ -101,6 +101,7 @@ export async function createInvoice(prevState: State, formData: FormData) {
       message: 'Missing Fields. Failed to Create Invoice.',
     };
   }
+
 
   // Prepare data for insertion into the database
   const { customerId, amount, status } = validatedFields.data;
